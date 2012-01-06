@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HelperMainActivity</string>
+    
+	<!--     main menu -->
+    <string name="item_sort">Sort</string>
+    <string name="item_by_name">By AppName</string>
+    <string name="item_by_package">By PackageName</string>
+    <string name="item_by_layout">By Layout</string>
+    <string name="item_filter">Filter</string>
+    <string name="item_batch">Batch</string>
+    <string name="item_history">History</string>
+    <string name="item_setting">Setting</string>
+    
+    
+    
+</resources>
