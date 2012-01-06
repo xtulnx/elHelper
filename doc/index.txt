@@ -1,0 +1,44 @@
+EspierLaucnherHelper
+
+
+Menu
+	Sort
+		By Name
+		By Package
+		By Layout
+	Filter
+		
+	Batch
+		board + primitive + glass
+
+	History
+		
+	Setting
+
+
+
+onLongClick
+	Edit
+
+
+
+Edit
+	Label
+		(warning: it will be restored when language is changed or )
+
+	Icon
+		(warning: it will be restored when Launcher updated or )
+		
+		select board primitive glass-enable
+
+
+History
+	(MultiSel)
+	Remove
+
+	Repeat
+
+
+
+Setting
+	Enable Auto Log History
