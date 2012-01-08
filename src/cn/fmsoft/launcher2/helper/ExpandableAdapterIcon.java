@@ -11,6 +11,7 @@ import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseExpandableListAdapter;
+import android.widget.TextView;
 
 public class ExpandableAdapterIcon extends BaseExpandableListAdapter{
 	private Context mContext;
@@ -69,6 +70,9 @@ public class ExpandableAdapterIcon extends BaseExpandableListAdapter{
 	public View getGroupView(int groupPosition, boolean isExpanded,
 			View convertView, ViewGroup parent) {
 		// TODO Auto-generated method stub
+		final TextView view= new TextView(mContext);
+		final NodeInfo info = mTR.getChildAt(groupPosition);
+		view.setText(info==null?"unkown":info.mInfo.mTitle);
 		return null;
 	}
 

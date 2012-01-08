@@ -1,18 +1,17 @@
 package cn.fmsoft.launcher2.helper;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 
-import cn.fmsoft.launcher2.LauncherSettings;
-import cn.fmsoft.launcher2.ShortcutInfo;
-import cn.fmsoft.launcher2.util.LogUtil;
-import cn.fmsoft.launcher2.util.Utilities;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.util.Log;
 
@@ -54,6 +53,10 @@ public class EspierLauncherLoader {
     static final String APPWIDGET_ID = "appWidgetId";
     static final String URI = "uri";
 
+    static final int CONTAINER_DESKTOP = -100;
+    
+
+    static final int CONTAINER_GARDEN = -200;
     /**
      * The display mode if the item is a live folder.
      * <P>Type: INTEGER</P>
@@ -72,8 +75,14 @@ public class EspierLauncherLoader {
 	ArrayList<ItemInfo> load(Context context) {
 		final Cursor c = context.getContentResolver().query(EL_CONTENT_URI,
 				null, null, null, null);
-				
+		
+		if (c==null) {
+			return null;
+		}
+		
 		ArrayList<ItemInfo> items = null;
+		
+		
 
 		try {
 			final int idIndex = c.getColumnIndexOrThrow(_ID);
@@ -113,6 +122,7 @@ public class EspierLauncherLoader {
 			while (!mStopped && c.moveToNext()) {
 				try {
 					int itemType = c.getInt(itemTypeIndex);
+					ItemInfo info;
 					switch (itemType) {
 					case ITEM_TYPE_APPLICATION:
 					case ITEM_TYPE_SHORTCUT:
@@ -129,7 +139,7 @@ public class EspierLauncherLoader {
 
                         if (info != null) {
                         	info.itemType = itemType;
-                            updateSavedIcon(context, info, c, iconIndex);
+//                            updateSavedIcon(context, info, c, iconIndex);
                             
                             info.mIntent = intent;
                             info.id = c.getLong(idIndex);
@@ -142,30 +152,31 @@ public class EspierLauncherLoader {
                             info.mTaskbarOrder = c.getLong(taskbarOrderIndex);
                             
                             // check & update map of what's occupied
-                            if (!checkItemPlacement(occupied, info)) {
+                  /*          if (!checkItemPlacement(occupied, info)) {
                             	deleteItemFromDatabase(mContext,info);
                                 break;
-                            }
+                            }*/
 
                             switch (container) {
-                            case LauncherSettings.Favorites.CONTAINER_DESKTOP:
-                                mItems.add(info);
-                                mAllShortcutItems.add(info);
+                            case CONTAINER_DESKTOP:
+                                items.add(info);
+//                                mAllShortcutItems.add(info);
                                 break;
                             default:
-                            	mAllShortcutItems.add(info);
+//                            	mAllShortcutItems.add(info);
+                                items.add(info);
                                 break;
                             }
-                            shortcutNum++;
+//                            shortcutNum++;
                         } else {
                             // Failed to load the shortcut, probably because the
                             // activity manager couldn't resolve it (maybe the app
                             // was uninstalled), or the db row was somehow screwed up.
                             // Delete it.
-                            id = c.getLong(idIndex);
-                            LogUtil.e(TAG, "Error loading shortcut " + id + ", removing it");
-                            contentResolver.delete(LauncherSettings.Favorites.getContentUri(
-                                        id, false), null, null);
+//                            id = c.getLong(idIndex);
+//                            LogUtil.e(TAG, "Error loading shortcut " + id + ", removing it");
+//                            contentResolver.delete(LauncherSettings.Favorites.getContentUri(
+//                                        id, false), null, null);
                         }
 						break;
 
@@ -193,14 +204,11 @@ public class EspierLauncherLoader {
 	        Bitmap icon = null;
 	        final ItemInfo info = new ItemInfo();
 	        info.itemType = ITEM_TYPE_SHORTCUT;
-
-	        // TODO: If there's an explicit component and we can't install that, delete it.
-
-	        info.setTitle(c.getString(titleIndex));
-
+	        info.mTitle = c.getString(titleIndex);
+	        
 	        int iconType = c.getInt(iconTypeIndex);
 	        switch (iconType) {
-	        case LauncherSettings.Favorites.ICON_TYPE_RESOURCE:
+	        case ICON_TYPE_RESOURCE:
 	            String packageName = c.getString(iconPackageIndex);
 	            String resourceName = c.getString(iconResourceIndex);
 	            PackageManager packageManager = context.getPackageManager();
@@ -210,7 +218,7 @@ public class EspierLauncherLoader {
 	                Resources resources = packageManager.getResourcesForApplication(packageName);
 	                if (resources != null) {
 	                    final int id = resources.getIdentifier(resourceName, null, null);
-	                    icon = Utilities.createIconBitmap(resources.getDrawable(id), context, packageName.hashCode());
+	                    icon = IconFactory.drawableToBitmap(context, resources.getDrawable(id));
 	                }
 	            } catch (Exception e) {
 	                // drop this.  we have other places to look for icons
@@ -225,7 +233,7 @@ public class EspierLauncherLoader {
 	                info.usingFallbackIcon = true;
 	            }
 	            break;
-	        case LauncherSettings.Favorites.ICON_TYPE_BITMAP:
+	        case ICON_TYPE_BITMAP:
 	            icon = getIconFromCursor(c, iconIndex);
 	            if (icon == null) {
 	                icon = getFallbackIcon();
@@ -244,4 +252,36 @@ public class EspierLauncherLoader {
 	        info.setIcon(icon);
 	        return info;
 	    }
+	   
+	private Bitmap getFallbackIcon() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	Bitmap getIconFromCursor(Cursor c, int iconIndex) {
+		byte[] data = c.getBlob(iconIndex);
+		try {
+			Bitmap icon = BitmapFactory.decodeByteArray(data, 0, data.length);
+			return icon;
+			// return icon.copy(icon.getConfig(), true);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
+	static byte[] flattenBitmap(Bitmap bitmap) {
+		// Try go guesstimate how much space the icon will take when serialized
+		// to avoid unnecessary allocations/copies during the write.
+		int size = bitmap.getWidth() * bitmap.getHeight() * 4;
+		ByteArrayOutputStream out = new ByteArrayOutputStream(size);
+		try {
+			bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+			out.flush();
+			out.close();
+			return out.toByteArray();
+		} catch (IOException e) {
+			Log.w("Favorite", "Could not write icon");
+			return null;
+		}
+	}
 }
